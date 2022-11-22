@@ -91,9 +91,12 @@ class Solver(object):
         iter_per_epoch = min(len(svhn_iter), len(mnist_iter))
         
         # fixed mnist and svhn for sampling
-        fixed_svhn = self.to_var(svhn_iter.next()[0])
-        fixed_mnist = self.to_var(mnist_iter.next()[0])
-        
+        if torch.cuda.is_available():
+            fixed_svhn = next(svhn_iter)[0].cuda()
+            fixed_mnist = next(mnist_iter)[0].cuda()
+        else:
+            fixed_svhn = next(svhn_iter)[0].cpu()
+            fixed_mnist = next(mnist_iter)[0].cpu()   
         # loss if use_labels = True
         criterion = nn.CrossEntropyLoss()
         
@@ -104,9 +107,9 @@ class Solver(object):
                 svhn_iter = iter(self.svhn_loader)
             
             # load svhn and mnist dataset
-            svhn, s_labels = svhn_iter.next() 
+            svhn, s_labels = next(svhn_iter)
             svhn, s_labels = self.to_var(svhn), self.to_var(s_labels).long().squeeze()
-            mnist, m_labels = mnist_iter.next() 
+            mnist, m_labels = next(mnist_iter)
             mnist, m_labels = self.to_var(mnist), self.to_var(m_labels)
 
             if self.use_labels:
@@ -191,6 +194,11 @@ class Solver(object):
             g_loss.backward()
             self.g_optimizer.step()
             
+            print('Step [%d/%d], d_real_loss: %.4f, d_mnist_loss: %.4f, d_svhn_loss: %.4f, '
+                      'd_fake_loss: %.4f, g_loss: %.4f' 
+                      %(step+1, self.train_iters, d_real_loss.item(), d_mnist_loss.item(), 
+                        d_svhn_loss.item(), d_fake_loss.item(), g_loss.item()))
+
             # print the log info
             if (step+1) % self.log_step == 0:
                 print('Step [%d/%d], d_real_loss: %.4f, d_mnist_loss: %.4f, d_svhn_loss: %.4f, '
