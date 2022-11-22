@@ -32,12 +32,12 @@ if __name__ == '__main__':
     parser.add_argument('--image_size', type=int, default=32)
     parser.add_argument('--g_conv_dim', type=int, default=64)
     parser.add_argument('--d_conv_dim', type=int, default=64)
-    parser.add_argument('--use_reconst_loss', required=True, type=str2bool)
-    parser.add_argument('--use_labels', required=True, type=str2bool)
+    parser.add_argument('--use_reconst_loss', default = True,type=str2bool) #required=True, 
+    parser.add_argument('--use_labels', default=True, type=str2bool)#required=True,
     parser.add_argument('--num_classes', type=int, default=10)
     
     # training hyper-parameters
-    parser.add_argument('--train_iters', type=int, default=40000)
+    parser.add_argument('--train_iters', type=int, default=5)
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--num_workers', type=int, default=2)
     parser.add_argument('--lr', type=float, default=0.0002)
