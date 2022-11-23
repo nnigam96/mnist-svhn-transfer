@@ -192,14 +192,15 @@ class Solver(object):
             self.reset_grad()
             fake_svhn = self.g12(mnist)
             # plot fake_svhn
-            fake_svhn_plot = fake_svhn.detach().cpu().squeeze(0).squeeze(0).numpy()
+            fake_svhn_plot = fake_svhn[1,:,:,:].detach().cpu().squeeze(0).squeeze(0).numpy()
             plt.figure()
             plt.imshow(fake_svhn_plot,cmap='gray')
             writer.add_figure('Intermediate (svhn)', plt.gcf(), global_step=step)
 
             out = self.d2(fake_svhn)
             reconst_mnist = self.g21(fake_svhn)
-            reconst_mnist_plot = reconst_mnist.detach().cpu().squeeze(0).squeeze(0).numpy()
+            # plot reconstructed mnist
+            reconst_mnist_plot = reconst_mnist[1,:,:,:].detach().cpu().squeeze(0).squeeze(0).numpy()
             plt.figure()
             plt.imshow(reconst_mnist_plot,cmap='gray')
             writer.add_figure('Intermediate (svhn)', plt.gcf(), global_step=step)
