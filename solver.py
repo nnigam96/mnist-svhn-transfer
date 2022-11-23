@@ -10,6 +10,11 @@ from torch.autograd import Variable
 from torch import optim
 from model import G12, G21
 from model import D1, D2
+import matplotlib
+import matlplotlib.pyplot as plt
+
+from torch.utils.tensorboard import SummaryWriter
+
 
 
 class Solver(object):
@@ -99,7 +104,13 @@ class Solver(object):
             fixed_mnist = next(mnist_iter)[0].cpu()   
         # loss if use_labels = True
         criterion = nn.CrossEntropyLoss()
-        
+        # Add a sumary writer
+        writer = SummaryWriter()
+
+        gen_loss=[]
+        disc1_loss=[]
+        disc2_loss=[]
+        disc_loss = []
         for step in range(self.train_iters+1):
             # reset data_iter for each epoch
             if (step+1) % iter_per_epoch == 0:
@@ -127,16 +138,24 @@ class Solver(object):
                 d1_loss = criterion(out, m_labels)
             else:
                 d1_loss = torch.mean((out-1)**2)
+            disc1_loss.append(d1_loss)
+            writer.add_scalar('Discriminator loss',d1_loss.item())
             
             out = self.d2(svhn)
             if self.use_labels:
                 d2_loss = criterion(out, s_labels)
             else:
                 d2_loss = torch.mean((out-1)**2)
+            disc2_loss.append(d2_loss)
+            writer.add_scalar('Discriminator2 loss',d2_loss.item())
             
             d_mnist_loss = d1_loss
             d_svhn_loss = d2_loss
             d_real_loss = d1_loss + d2_loss
+            
+            disc_loss.append(d_real_loss.item())
+            writer.add_scalar('Combined disc loss',d_real_loss.item())
+            
             d_real_loss.backward()
             self.d_optimizer.step()
             
@@ -162,11 +181,29 @@ class Solver(object):
             
             #============ train G ============#
             
+            # Plot the input mnist image
+
+            mnist_plot= mnist[0,:,:,:].detach().cpu().numpy().squeeze(0)
+            plt.figure()
+            plt.imshow(mnist_plot,cmap='gray')
+            writer.add_figure('Input mnist image', plt.gcf(),global_step=epoch)
+            
             # train mnist-svhn-mnist cycle
             self.reset_grad()
             fake_svhn = self.g12(mnist)
+            # plot fake_svhn
+            fake_svhn_plot = fake_svhn.detach().cpu().squeeze(0).squeeze(0).numpy()
+            plt.figure()
+            plt.imshow(fake_svhn_plot,cmap='gray')
+            writer.add_figure('Intermediate (svhn)', plt.gcf(), global_step=step)
+
             out = self.d2(fake_svhn)
             reconst_mnist = self.g21(fake_svhn)
+            reconst_mnist_plot = reconst_mnist.detach().cpu().squeeze(0).squeeze(0).numpy()
+            plt.figure()
+            plt.imshow(reconst_mnist_plot,cmap='gray')
+            writer.add_figure('Intermediate (svhn)', plt.gcf(), global_step=step)
+
             if self.use_labels:
                 g_loss = criterion(out, m_labels) 
             else:
@@ -178,18 +215,18 @@ class Solver(object):
             g_loss.backward()
             self.g_optimizer.step()
 
-            # train svhn-mnist-svhn cycle
-            self.reset_grad()
-            fake_mnist = self.g21(svhn)
-            out = self.d1(fake_mnist)
-            reconst_svhn = self.g12(fake_mnist)
-            if self.use_labels:
-                g_loss = criterion(out, s_labels) 
-            else:
-                g_loss = torch.mean((out-1)**2) 
+            # # train svhn-mnist-svhn cycle
+            # self.reset_grad()
+            # fake_mnist = self.g21(svhn)
+            # out = self.d1(fake_mnist)
+            # reconst_svhn = self.g12(fake_mnist)
+            # if self.use_labels:
+            #     g_loss = criterion(out, s_labels) 
+            # else:
+            #     g_loss = torch.mean((out-1)**2) 
 
-            if self.use_reconst_loss:
-                g_loss += torch.mean((svhn - reconst_svhn)**2)
+            # if self.use_reconst_loss:
+            #     g_loss += torch.mean((svhn - reconst_svhn)**2)
 
             g_loss.backward()
             self.g_optimizer.step()
