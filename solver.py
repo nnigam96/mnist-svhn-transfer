@@ -10,8 +10,8 @@ from torch.autograd import Variable
 from torch import optim
 from model import G12, G21
 from model import D1, D2
-import matplotlib
-import matlplotlib.pyplot as plt
+import matplotlib.pyplot as plt
+#import matlplotlib.pyplot as plt
 
 from torch.utils.tensorboard import SummaryWriter
 
@@ -139,7 +139,7 @@ class Solver(object):
             else:
                 d1_loss = torch.mean((out-1)**2)
             disc1_loss.append(d1_loss)
-            writer.add_scalar('Discriminator loss',d1_loss.item())
+            writer.add_scalar('Discriminator loss',d1_loss.item(),  global_step=step)
             
             out = self.d2(svhn)
             if self.use_labels:
@@ -147,14 +147,14 @@ class Solver(object):
             else:
                 d2_loss = torch.mean((out-1)**2)
             disc2_loss.append(d2_loss)
-            writer.add_scalar('Discriminator2 loss',d2_loss.item())
+            writer.add_scalar('Discriminator2 loss',d2_loss.item(), global_step=step)
             
             d_mnist_loss = d1_loss
             d_svhn_loss = d2_loss
             d_real_loss = d1_loss + d2_loss
             
             disc_loss.append(d_real_loss.item())
-            writer.add_scalar('Combined disc loss',d_real_loss.item())
+            writer.add_scalar('Combined disc loss',d_real_loss.item(),  global_step=step)
             
             d_real_loss.backward()
             self.d_optimizer.step()
@@ -186,7 +186,7 @@ class Solver(object):
             mnist_plot= mnist[0,:,:,:].detach().cpu().numpy().squeeze(0)
             plt.figure()
             plt.imshow(mnist_plot,cmap='gray')
-            writer.add_figure('Input mnist image', plt.gcf(),global_step=epoch)
+            writer.add_figure('Input mnist image', plt.gcf(),global_step=step)
             
             # train mnist-svhn-mnist cycle
             self.reset_grad()
@@ -203,7 +203,7 @@ class Solver(object):
             reconst_mnist_plot = reconst_mnist[1,:,:,:].detach().cpu().squeeze(0).squeeze(0).numpy()
             plt.figure()
             plt.imshow(reconst_mnist_plot,cmap='gray')
-            writer.add_figure('Intermediate (svhn)', plt.gcf(), global_step=step)
+            writer.add_figure('Reconstructed (mnist)', plt.gcf(), global_step=step)
 
             if self.use_labels:
                 g_loss = criterion(out, m_labels) 
@@ -229,8 +229,8 @@ class Solver(object):
             # if self.use_reconst_loss:
             #     g_loss += torch.mean((svhn - reconst_svhn)**2)
 
-            g_loss.backward()
-            self.g_optimizer.step()
+            #g_loss.backward()
+            #self.g_optimizer.step()
             
             print('Step [%d/%d], d_real_loss: %.4f, d_mnist_loss: %.4f, d_svhn_loss: %.4f, '
                       'd_fake_loss: %.4f, g_loss: %.4f' 
