@@ -5,12 +5,14 @@ import os
 import pickle
 import scipy.io
 import numpy as np
-
+from PIL import Image
 from torch.autograd import Variable
 from torch import optim
 from model import G12, G21
 from model import D1, D2
 import matplotlib.pyplot as plt
+from torchvision.utils import save_image
+
 #import matlplotlib.pyplot as plt
 
 from torch.utils.tensorboard import SummaryWriter
@@ -65,7 +67,7 @@ class Solver(object):
     def merge_images(self, sources, targets, k=10):
         _, _, h, w = sources.shape
         row = int(np.sqrt(self.batch_size))
-        merged = np.zeros([3, row*h, row*w*2])
+        merged = np.zeros([1, row*h, row*w*2])
         for idx, (s, t) in enumerate(zip(sources, targets)):
             i = idx // row
             j = idx % row
@@ -129,7 +131,6 @@ class Solver(object):
                 svhn_fake_labels = self.to_var(
                     torch.Tensor([self.num_classes]*mnist.size(0)).long())
             
-            #============ train D ============#
             
             # train with real images
             self.reset_grad()
@@ -197,7 +198,7 @@ class Solver(object):
             plt.imshow(fake_svhn_plot,cmap='gray')
             writer.add_figure('Intermediate (svhn)', plt.gcf(), global_step=step)
 
-            out = self.d2(fake_svhn)
+            out = self.g21(fake_svhn)
             reconst_mnist = self.g21(fake_svhn)
             # plot reconstructed mnist
             reconst_mnist_plot = reconst_mnist[1,:,:,:].detach().cpu().squeeze(0).squeeze(0).numpy()
@@ -215,34 +216,42 @@ class Solver(object):
 
             g_loss.backward()
             self.g_optimizer.step()
+            writer.add_scalar('mnist-svhn-mnist reconstruction loses',g_loss.item(),  global_step=step)
 
-            # # train svhn-mnist-svhn cycle
-            # self.reset_grad()
-            # fake_mnist = self.g21(svhn)
-            # out = self.d1(fake_mnist)
-            # reconst_svhn = self.g12(fake_mnist)
-            # if self.use_labels:
-            #     g_loss = criterion(out, s_labels) 
-            # else:
-            #     g_loss = torch.mean((out-1)**2) 
+            # train svhn-mnist-svhn cycle
+            self.reset_grad()
+            fake_mnist = self.g21(svhn)
+            out = self.d1(fake_mnist)
+            reconst_svhn = self.g12(fake_mnist)
+            if self.use_labels:
+                g_loss = criterion(out, s_labels) 
+            else:
+                g_loss = torch.mean((out-1)**2)
+            if self.use_reconst_loss:
+                g_loss += torch.mean((svhn - reconst_svhn)**2)
+            g_loss.backward()
+            self.g_optimizer.step()
+            writer.add_scalar('svhn-mnist-svhn reconstruction loses',g_loss.item(),  global_step=step)
 
-            # if self.use_reconst_loss:
-            #     g_loss += torch.mean((svhn - reconst_svhn)**2)
+            reconst_svhn_plot = reconst_svhn[1,:,:,:].detach().cpu().squeeze(0).squeeze(0).numpy()
+            plt.figure()
+            plt.imshow(reconst_svhn_plot,cmap='gray')
+            writer.add_figure('Reconstructed (svhn)', plt.gcf(), global_step=step)
 
-            #g_loss.backward()
-            #self.g_optimizer.step()
-            
-            print('Step [%d/%d], d_real_loss: %.4f, d_mnist_loss: %.4f, d_svhn_loss: %.4f, '
-                      'd_fake_loss: %.4f, g_loss: %.4f' 
-                      %(step+1, self.train_iters, d_real_loss.item(), d_mnist_loss.item(), 
-                        d_svhn_loss.item(), d_fake_loss.item(), g_loss.item()))
+
+
+
+            #print('Step [%d/%d], d_real_loss: %.4f, d_mnist_loss: %.4f, d_svhn_loss: %.4f, '
+            #          'd_fake_loss: %.4f, g_loss: %.4f' 
+            #          %(step+1, self.train_iters, d_real_loss.item(), d_mnist_loss.item(), 
+            #            d_svhn_loss.item(), d_fake_loss.item(), g_loss.item()))
 
             # print the log info
             if (step+1) % self.log_step == 0:
                 print('Step [%d/%d], d_real_loss: %.4f, d_mnist_loss: %.4f, d_svhn_loss: %.4f, '
                       'd_fake_loss: %.4f, g_loss: %.4f' 
-                      %(step+1, self.train_iters, d_real_loss.data[0], d_mnist_loss.data[0], 
-                        d_svhn_loss.data[0], d_fake_loss.data[0], g_loss.data[0]))
+                      %(step+1, self.train_iters, d_real_loss.item(), d_mnist_loss.item(), 
+                        d_svhn_loss.item(), d_fake_loss.item(), g_loss.item()))
 
             # save the sampled images
             if (step+1) % self.sample_step == 0:
@@ -254,12 +263,20 @@ class Solver(object):
                 
                 merged = self.merge_images(mnist, fake_svhn)
                 path = os.path.join(self.sample_path, 'sample-%d-m-s.png' %(step+1))
-                scipy.misc.imsave(path, merged)
+                #scipy.misc.imsave(path, merged)
+                i = Image.fromarray(merged.squeeze(-1))
+                i=i.convert('L')
+                i.save(path)
+                #save_image(merged, path)
                 print ('saved %s' %path)
                 
                 merged = self.merge_images(svhn, fake_mnist)
                 path = os.path.join(self.sample_path, 'sample-%d-s-m.png' %(step+1))
-                scipy.misc.imsave(path, merged)
+                #scipy.misc.imsave(path, merged)
+                i = Image.fromarray(merged.squeeze(-1))
+                i=i.convert('L')
+                i.save(path)
+
                 print ('saved %s' %path)
             
             if (step+1) % 5000 == 0:
