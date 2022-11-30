@@ -3,6 +3,7 @@ from torch.utils.data import Dataset
 import pandas as pd
 from PIL import Image
 import torchvision.transforms as transforms
+import random
 
 class Hindi_Digits(Dataset):
     def __init__(self, csv='LabelMap_only1.csv', transform=None):
@@ -29,3 +30,12 @@ class Hindi_Digits(Dataset):
         image = image.to(torch.float32)
         #label = label.to(torch.float32)
         return image, label
+
+    def get_item_from_label(self, label):
+        df  = self.annotation
+        image_list = df.index[df['label']==label].tolist()
+        rand_index = random.sample(image_list,1)
+        image = Image.open(df.iloc[rand_index]['path'].item())
+        image = transforms.PILToTensor()(image)
+        image = image.to(torch.float32)
+        return image
