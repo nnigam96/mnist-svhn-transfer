@@ -14,22 +14,17 @@ def get_loader(config):
     
     #svhn = datasets.SVHN(root=config.svhn_path, download=True, transform=transform)
     mnist = datasets.MNIST(root=config.mnist_path, download=True, transform=transform)
+    
+    indices = mnist.targets == 5 # if you want to keep images with the label 5
+    mnist.data, mnist.targets = mnist.data[indices], mnist.targets[indices]
 
-#     img_rgb = Image.open('erock_rgb.jpg')
-
-# img_gray = img_rgb.convert('L')
-
-# img_gray.save('erock_gray.jpg')
-
-    # svhn_loader = torch.utils.data.DataLoader(dataset=svhn,
-    #                                           batch_size=config.batch_size,
-    #                                           shuffle=True,
-    #                                           num_workers=config.num_workers)
 
     mnist_loader = torch.utils.data.DataLoader(dataset=mnist,
                                                batch_size=config.batch_size,
                                                shuffle=True,
                                                num_workers=config.num_workers)
+
+    
 
     hindi_mnist_loader = torch.utils.data.DataLoader(dataset=Hindi_Digits(),
                                                batch_size=config.batch_size,

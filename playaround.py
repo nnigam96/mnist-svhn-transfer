@@ -11,6 +11,8 @@ def generate_annotations(rootdir):
     df = pd.DataFrame(columns=['path', 'label'])
     for dir in os.listdir(rootdir):
          currLabel = int(str((dir)))
+         if currLabel!=1:
+            continue
          for filename in os.listdir(os.path.join(rootdir,dir)):
              path = os.path.join(rootdir,dir,filename)
              temp_dict = {'path': path, 'label':currLabel}
@@ -19,9 +21,9 @@ def generate_annotations(rootdir):
     return df
 
 df = generate_annotations(rootdir=rootdir)
-df.to_csv('LabelMap.csv')
+df.to_csv('LabelMap_only1.csv')
 
-Hindi = Hindi_Digits('LabelMap.csv')
+Hindi = Hindi_Digits('LabelMap_only1.csv')
 
 x, label = Hindi[10]
 plt.imshow(x.squeeze(), cmap = 'gray')
