@@ -1,8 +1,9 @@
 import torch
 from torchvision import datasets
 from torchvision import transforms
+from torch.utils.data import RandomSampler
 from Hindi_dataset import *
-
+import copy
 
 def get_loader(config):
     """Builds and returns Dataloader for MNIST and SVHN dataset."""
@@ -18,6 +19,15 @@ def get_loader(config):
     #indices = mnist.targets == 1 # if you want to keep images with the label 5
     #mnist.data, mnist.targets = mnist.data[indices], mnist.targets[indices]
 
+    def mnist_sampler(mnist):
+        mnist_dict = {}
+        for i in range(0,10):
+            indices = mnist.targets == i # if you want to keep images with the label 5
+            #temp_mnist.data, temp_mnist.targets = temp_mnist.data[indices], temp_mnist.targets[indices]
+            mnist_dict[i]=mnist.data[indices]
+        return mnist_dict
+
+
 
     mnist_loader = torch.utils.data.DataLoader(dataset=mnist,
                                                batch_size=config.batch_size,
@@ -31,5 +41,17 @@ def get_loader(config):
                                                shuffle=True,
                                                num_workers=config.num_workers)
 
-    return hindi_mnist_loader, mnist_loader
+    mnist_dict = mnist_sampler(mnist)
+    x = get_random_sample(mnist_dict, 2)
+    return hindi_mnist_loader, mnist_loader, mnist_dict
 
+
+def get_random_sample(mnist_dict, label):
+    img_loader = torch.utils.data.DataLoader(dataset=mnist_dict[label],
+                                               batch_size=1,
+                                               shuffle=True,
+                                               )
+    
+    itr = iter(img_loader)
+    img = next(itr)
+    return img

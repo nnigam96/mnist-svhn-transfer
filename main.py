@@ -1,16 +1,16 @@
 import argparse
 import os
-from solver import Solver
+from solver_m import Solver
 from torch.backends import cudnn
-from data_loader import get_loader
+from data_loader import *
 
 def str2bool(v):
     return v.lower() in ('true')
 
 def main(config):
-    svhn_loader, mnist_loader = get_loader(config)
+    svhn_loader, mnist_loader, mnist_dict = get_loader(config)
     
-    solver = Solver(config, svhn_loader, mnist_loader)
+    solver = Solver(config, svhn_loader, mnist_loader, mnist_dict)
     cudnn.benchmark = True 
     
     # create directories if not exist

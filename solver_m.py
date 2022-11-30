@@ -12,7 +12,7 @@ from model import G12, G21
 from model import D1, D2
 import matplotlib.pyplot as plt
 from torchvision.utils import save_image
-
+from data_loader import *
 # import matlplotlib.pyplot as plt
 
 from torch.utils.tensorboard import SummaryWriter

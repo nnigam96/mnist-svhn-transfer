@@ -6,7 +6,7 @@ import torchvision.transforms as transforms
 import random
 
 class Hindi_Digits(Dataset):
-    def __init__(self, csv='LabelMap_only1.csv', transform=None):
+    def __init__(self, csv='LabelMap.csv', transform=None):
         self.annotation = pd.read_csv(csv)
         #self.root_dir = root_dir
         self.transform = transform
