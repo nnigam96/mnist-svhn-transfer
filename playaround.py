@@ -3,7 +3,7 @@ import os
 import pandas as pd
 from Hindi_dataset import *
 import matplotlib.pyplot as plt
-
+from torchvision.datasets import MNIST
 #Root directory contains list of all 
 rootdir = r"E:\Nikhil Spring 22\archive\Hindi-MNIST\train"
 
@@ -20,11 +20,14 @@ def generate_annotations(rootdir):
     
     return df
 
-df = generate_annotations(rootdir=rootdir)
-df.to_csv('LabelMap_only1.csv')
 
-Hindi = Hindi_Digits('LabelMap_only1.csv')
 
-x, label = Hindi[10]
+
+#df = generate_annotations(rootdir=rootdir)
+#df.to_csv('LabelMap_only1.csv')
+
+Hindi = Hindi_Digits('LabelMap.csv')
+
+x = Hindi.get_item_from_label(2)
 plt.imshow(x.squeeze(), cmap = 'gray')
 print("Here")

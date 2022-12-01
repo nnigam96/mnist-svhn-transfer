@@ -8,9 +8,9 @@ def str2bool(v):
     return v.lower() in ('true')
 
 def main(config):
-    svhn_loader, mnist_loader, mnist_dict = get_loader(config)
+    svhn_loader, mnist_loader, mnist_dict, hindi_dict = get_loader(config)
     
-    solver = Solver(config, svhn_loader, mnist_loader, mnist_dict)
+    solver = Solver(config, svhn_loader, mnist_loader, mnist_dict, hindi_dict)
     cudnn.benchmark = True 
     
     # create directories if not exist

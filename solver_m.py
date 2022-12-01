@@ -11,7 +11,7 @@ from torch import optim
 from model import G12, G21
 from model import D1, D2
 import matplotlib.pyplot as plt
-from data_loader import
+from data_loader import *
 from torchvision.utils import save_image
 
 # import matlplotlib.pyplot as plt
@@ -21,7 +21,7 @@ from torchmetrics.functional import structural_similarity_index_measure as ssim
 
 
 class Solver(object):
-    def __init__(self, config, svhn_loader, mnist_loader):
+    def __init__(self, config, svhn_loader, mnist_loader, mnist_dict, hindi_dict):
         self.svhn_loader = svhn_loader
         self.mnist_loader = mnist_loader
         self.gen_HINDI = None
@@ -45,6 +45,8 @@ class Solver(object):
         self.sample_path = config.sample_path
         self.model_path = config.model_path
         self.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+        self.mnist_dict = mnist_dict
+        self.hindi_dict = hindi_dict
         self.build_model()
 
     def build_model(self):
@@ -113,19 +115,19 @@ class Solver(object):
         gen_MNIST = G12(conv_dim=self.g_conv_dim).to(self.DEVICE)
         disc_MNIST = D1(conv_dim=self.d_conv_dim, use_labels=self.use_labels).to(self.DEVICE)
         disc_HINDI = D1(conv_dim=self.d_conv_dim, use_labels=self.use_labels).to(self.DEVICE)
-        semantic_disc_HINDI = D1(conv_dim=self.d_conv_dim, use_labels=self.use_labels).to(self.DEVICE)
-        semantic_disc_MNIST = D1(conv_dim=self.d_conv_dim, use_labels=self.use_labels).to(self.DEVICE)
+        semantic_disc_HINDI = G12(conv_dim=self.g_conv_dim).to(self.DEVICE)
+        semantic_disc_MNIST = G12(conv_dim=self.g_conv_dim).to(self.DEVICE)
 
         # g_params = list(gen_HINDI.parameters()) + list(gen_MNIST.parameters())
         # d_params = list(disc_MNIST.parameters()) + list(disc_HINDI.parameters())
 
         opt_gen = optim.Adam(list(gen_HINDI.parameters()) + list(gen_MNIST.parameters()), self.lr,
                              betas=(self.beta1, self.beta2))
-        opt_disc = optim.Adam(list(disc_MNIST.parameters()) + list(disc_HINDI.parameters()), self.lr,
-                              betas=(self.beta1, self.beta2))
+        #opt_disc = optim.Adam(list(disc_MNIST.parameters()) + list(disc_HINDI.parameters()), self.lr,
+        #                     betas=(self.beta1, self.beta2))
 
-        opt_disc = optim.Adam(list(disc_MNIST.parameters()) + list(disc_HINDI.parameters()
-                            + list(semantic_disc_MNIST.parameters())+ list(semantic_disc_HINDI.parameters())), self.lr,
+        opt_disc = optim.Adam(list(disc_MNIST.parameters()) + list(disc_HINDI.parameters())
+                            + list(semantic_disc_MNIST.parameters())+ list(semantic_disc_HINDI.parameters()), self.lr,
                               betas=(self.beta1, self.beta2))
 
         g_scaler = torch.cuda.amp.GradScaler()
@@ -214,8 +216,9 @@ class Solver(object):
                 # ( Ensure one-to-one correspondence between inputs(MNIST:1,3,7) and generated(HINDI:1,3,5) )
                 # Compares the generated (HINDI: 1,3,5) to (sampled_HINDI:1,3,7)
                 # Forces the Generator to produce 1,3,7 in Hindi. 
-                
-                sampled_Hindi_batch = HINDI_BATCH_SAMPLER() # Nikhil will add this                                            
+                # MNIST Labels: m_labels
+                sampled_Hindi_batch = random_hindi_batch_gen(hindi_dict = self.hindi_dict, labels = m_labels)
+                #sampled_Hindi_batch = HINDI_BATCH_SAMPLER() # Nikhil will add this                                            
                 semantic_D_H_loss = self.ssim_criterion(SemanticDisc_HINDI_images,sampled_Hindi_batch)
 
 
@@ -245,7 +248,8 @@ class Solver(object):
 
                 #================================= Train the semantic MNIST discriminator ======================
                 SemanticDisc_MNIST_images = semantic_disc_MNIST(fake_mnist.detach())
-                sampled_MNIST_batch = MNIST_BATCH_SAMPLER()
+                sampled_MNIST_batch = random_mnist_batch_gen(mnist_dict = self.mnist_dict, labels = h_labels)
+                #sampled_MNIST_batch = MNIST_BATCH_SAMPLER() # Nikhil to add
                 semantic_D_M_loss = self.ssim_criterion(SemanticDisc_MNIST_images,sampled_MNIST_batch)
 
                 # plot the fake mnist
@@ -255,7 +259,7 @@ class Solver(object):
                 plt.imshow(fake_MNIST_plot, cmap='gray')
                 writer.add_figure('CycleHMH (MNIST)', plt.gcf(), global_step=step)
 
-            D_loss = (D_H_loss + D_M_loss) / 2
+            D_loss = (D_H_loss + D_M_loss + semantic_D_M_loss + semantic_D_H_loss) / 4
             d_scaler.scale(D_loss).backward()
             d_scaler.step(opt_disc)
             d_scaler.update()

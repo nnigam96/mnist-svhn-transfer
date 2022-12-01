@@ -30,12 +30,3 @@ class Hindi_Digits(Dataset):
         image = image.to(torch.float32)
         #label = label.to(torch.float32)
         return image, label
-
-    def get_item_from_label(self, label):
-        df  = self.annotation
-        image_list = df.index[df['label']==label].tolist()
-        rand_index = random.sample(image_list,1)
-        image = Image.open(df.iloc[rand_index]['path'].item())
-        image = transforms.PILToTensor()(image)
-        image = image.to(torch.float32)
-        return image
