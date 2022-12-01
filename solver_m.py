@@ -17,6 +17,7 @@ from torchvision.utils import save_image
 # import matlplotlib.pyplot as plt
 
 from torch.utils.tensorboard import SummaryWriter
+from torchmetrics.functional import structural_similarity_index_measure as ssim
 
 
 class Solver(object):
@@ -101,6 +102,11 @@ class Solver(object):
     #     result = mse(x, y)
     #     return result
 
+    def ssim_criterion(self,inp,op):
+        result=ssim(inp,op)
+        loss = 1 -result
+        return loss
+
     def train(self):
 
         gen_HINDI = G12(conv_dim=self.g_conv_dim).to(self.DEVICE)
@@ -134,6 +140,7 @@ class Solver(object):
         criterion = nn.CrossEntropyLoss()
         mse = nn.MSELoss()
         L1 = nn.L1Loss()
+
         # Add a summary writer
         writer = SummaryWriter()
 
