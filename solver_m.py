@@ -10,11 +10,13 @@ from torch.autograd import Variable
 from torch import optim
 from model import G12, G21
 from model import D1, D2
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from data_loader import *
 from torchvision.utils import save_image
 
-# import matlplotlib.pyplot as plt
+
 
 from torch.utils.tensorboard import SummaryWriter
 from torchmetrics.functional import structural_similarity_index_measure as ssim
@@ -177,87 +179,87 @@ class Solver(object):
             # Train discriminator MNIST and HINDI
 
             opt_disc.zero_grad()
-            with torch.cuda.amp.autocast():
+            # with torch.cuda.amp.autocast():
 
                 # Plot the input mnist image
 
-                mnist_plot = mnist[0, :, :, :].clone().detach().cpu().numpy().squeeze(0)
-                plt.figure()
-                plt.imshow(mnist_plot, cmap='gray')
-                writer.add_figure('Input mnist image', plt.gcf(), global_step=step)
+            mnist_plot = mnist[0, :, :, :].clone().detach().cpu().numpy().squeeze(0)
+            plt.figure()
+            plt.imshow(mnist_plot, cmap='gray')
+            writer.add_figure('Input mnist image', plt.gcf(), global_step=step)
 
-                # Plot the input Hindi image
+            # Plot the input Hindi image
 
-                hindi_plot = hindi[0, :, :, :].clone().detach().cpu().numpy().squeeze(0)
-                plt.figure()
-                plt.imshow(hindi_plot, cmap='gray')
-                writer.add_figure('Input Hindi image', plt.gcf(), global_step=step)
+            hindi_plot = hindi[0, :, :, :].clone().detach().cpu().numpy().squeeze(0)
+            plt.figure()
+            plt.imshow(hindi_plot, cmap='gray')
+            writer.add_figure('Input Hindi image', plt.gcf(), global_step=step)
 
-                # ================= INPUT : MNIST - HINDI-- MNIST ==================================
+            # ================= INPUT : MNIST - HINDI-- MNIST ==================================
 
-                # ==========Train the HINDI Distributive Discriminator for the MHM cycle  =======================
-                # Makes sure the dataset generated is in HINDI (Does not have one-to one correspondence to MNIST Inputs)
-                # Given MNIST (1,3,5) can generate HINDI (1,2,6). 
+            # ==========Train the HINDI Distributive Discriminator for the MHM cycle  =======================
+            # Makes sure the dataset generated is in HINDI (Does not have one-to one correspondence to MNIST Inputs)
+            # Given MNIST (1,3,5) can generate HINDI (1,2,6).
 
-                fake_hindi = gen_HINDI(mnist)
-                D_H_real = disc_HINDI(hindi)
-                D_H_fake = disc_HINDI(fake_hindi.detach())
-                D_H_real_loss = mse(D_H_real, torch.ones_like(D_H_real))
-                D_H_fake_loss = mse(D_H_fake, torch.zeros_like(D_H_fake))
-                D_H_loss = D_H_real_loss + D_H_fake_loss
-                writer.add_scalar('Hindi discriminator loss', D_H_loss.item(), global_step=step)
+            fake_hindi = gen_HINDI(mnist)
+            D_H_real = disc_HINDI(hindi)
+            D_H_fake = disc_HINDI(fake_hindi.detach())
+            D_H_real_loss = mse(D_H_real, torch.ones_like(D_H_real))
+            D_H_fake_loss = mse(D_H_fake, torch.zeros_like(D_H_fake))
+            D_H_loss = D_H_real_loss + D_H_fake_loss
+            writer.add_scalar('Hindi discriminator loss', D_H_loss.item(), global_step=step)
 
-                # ====================-   Train the semantic Hindi discriminator     ====================
+            # ====================-   Train the semantic Hindi discriminator     ====================
 
-                SemanticDisc_HINDI_images = semantic_disc_HINDI(fake_hindi.detach())
+            SemanticDisc_HINDI_images = semantic_disc_HINDI(fake_hindi.detach())
 
-                # Sample from the HINDI dataset given label from input MNIST
-                # Then compare with the generated HINDI 
-                # ( Ensure one-to-one correspondence between inputs(MNIST:1,3,7) and generated(HINDI:1,3,5) )
-                # Compares the generated (HINDI: 1,3,5) to (sampled_HINDI:1,3,7)
-                # Forces the Generator to produce 1,3,7 in Hindi. 
-                # MNIST Labels: m_labels
-                sampled_Hindi_batch = random_hindi_batch_gen(hindi_dict = self.hindi_dict, labels = m_labels)
-                #sampled_Hindi_batch = HINDI_BATCH_SAMPLER() # Nikhil will add this                                            
-                semantic_D_H_loss = self.ssim_criterion(SemanticDisc_HINDI_images,sampled_Hindi_batch)
-
-
-
-                # plot the fake hindi
-                fake_HINDI_plot = fake_hindi[1, :, :, :].clone().detach().cpu().squeeze(0).squeeze(0).numpy()
-                plt.figure()
-                plt.imshow(fake_HINDI_plot, cmap='gray')
-                writer.add_figure('CycleMHM (Hindi)', plt.gcf(), global_step=step)
+            # Sample from the HINDI dataset given label from input MNIST
+            # Then compare with the generated HINDI
+            # ( Ensure one-to-one correspondence between inputs(MNIST:1,3,7) and generated(HINDI:1,3,5) )
+            # Compares the generated (HINDI: 1,3,5) to (sampled_HINDI:1,3,7)
+            # Forces the Generator to produce 1,3,7 in Hindi.
+            # MNIST Labels: m_labels
+            sampled_Hindi_batch = random_hindi_batch_gen(hindi_dict = self.hindi_dict, labels = m_labels)
+            #sampled_Hindi_batch = HINDI_BATCH_SAMPLER() # Nikhil will add this
+            semantic_D_H_loss = self.ssim_criterion(SemanticDisc_HINDI_images,sampled_Hindi_batch.to(self.DEVICE))
 
 
 
-
-                # ================================ INPUT : HINDI -- MNIST-- HINDI ==================================
-
-                # ================================ Train the MNIST Discriminator ==============================
-
-                fake_mnist = gen_MNIST(hindi)
-                D_M_real = disc_MNIST(mnist)
-                D_M_fake = disc_MNIST(fake_mnist.detach())
-                D_M_real_loss = mse(D_M_real, torch.ones_like(D_M_real))
-                D_M_fake_loss = mse(D_M_fake, torch.zeros_like(D_M_fake))
-                D_M_loss = D_M_real_loss + D_M_fake_loss
-
-                writer.add_scalar('MNIST Discriminator loss', D_M_loss.item(), global_step=step)
+            # plot the fake hindi
+            fake_HINDI_plot = fake_hindi[1, :, :, :].clone().detach().cpu().squeeze(0).squeeze(0).numpy()
+            plt.figure()
+            plt.imshow(fake_HINDI_plot, cmap='gray')
+            writer.add_figure('CycleMHM (Hindi)', plt.gcf(), global_step=step)
 
 
-                #================================= Train the semantic MNIST discriminator ======================
-                SemanticDisc_MNIST_images = semantic_disc_MNIST(fake_mnist.detach())
-                sampled_MNIST_batch = random_mnist_batch_gen(mnist_dict = self.mnist_dict, labels = h_labels)
-                #sampled_MNIST_batch = MNIST_BATCH_SAMPLER() # Nikhil to add
-                semantic_D_M_loss = self.ssim_criterion(SemanticDisc_MNIST_images,sampled_MNIST_batch)
 
-                # plot the fake mnist
 
-                fake_MNIST_plot = fake_mnist[1, :, :, :].clone().detach().cpu().squeeze(0).squeeze(0).numpy()
-                plt.figure()
-                plt.imshow(fake_MNIST_plot, cmap='gray')
-                writer.add_figure('CycleHMH (MNIST)', plt.gcf(), global_step=step)
+            # ================================ INPUT : HINDI -- MNIST-- HINDI ==================================
+
+            # ================================ Train the MNIST Discriminator ==============================
+
+            fake_mnist = gen_MNIST(hindi)
+            D_M_real = disc_MNIST(mnist)
+            D_M_fake = disc_MNIST(fake_mnist.detach())
+            D_M_real_loss = mse(D_M_real, torch.ones_like(D_M_real))
+            D_M_fake_loss = mse(D_M_fake, torch.zeros_like(D_M_fake))
+            D_M_loss = D_M_real_loss + D_M_fake_loss
+
+            writer.add_scalar('MNIST Discriminator loss', D_M_loss.item(), global_step=step)
+
+
+            #================================= Train the semantic MNIST discriminator ======================
+            SemanticDisc_MNIST_images = semantic_disc_MNIST(fake_mnist.detach())
+            sampled_MNIST_batch = random_mnist_batch_gen(mnist_dict = self.mnist_dict, labels = h_labels)
+            #sampled_MNIST_batch = MNIST_BATCH_SAMPLER() # Nikhil to add
+            semantic_D_M_loss = self.ssim_criterion(SemanticDisc_MNIST_images,sampled_MNIST_batch.to(self.DEVICE))
+
+            # plot the fake mnist
+
+            fake_MNIST_plot = fake_mnist[1, :, :, :].clone().detach().cpu().squeeze(0).squeeze(0).numpy()
+            plt.figure()
+            plt.imshow(fake_MNIST_plot, cmap='gray')
+            writer.add_figure('CycleHMH (MNIST)', plt.gcf(), global_step=step)
 
             D_loss = (D_H_loss + D_M_loss + semantic_D_M_loss + semantic_D_H_loss) / 4
             d_scaler.scale(D_loss).backward()
@@ -269,46 +271,46 @@ class Solver(object):
 
 
             opt_gen.zero_grad()
-            with torch.cuda.amp.autocast():
+            # with torch.cuda.amp.autocast():
 
-                # Generator loss
+            # Generator loss
 
-                D_H_fake2 = disc_HINDI(fake_hindi)
-                D_M_fake2 = disc_MNIST(fake_mnist)
-                loss_Gen_HINDI = mse(D_H_fake2, torch.ones_like(D_H_fake2))
-                loss_Gen_MNIST = mse(D_M_fake2, torch.ones_like(D_M_fake2))
+            D_H_fake2 = disc_HINDI(fake_hindi)
+            D_M_fake2 = disc_MNIST(fake_mnist)
+            loss_Gen_HINDI = mse(D_H_fake2, torch.ones_like(D_H_fake2))
+            loss_Gen_MNIST = mse(D_M_fake2, torch.ones_like(D_M_fake2))
 
-                # Cycle loss
+            # Cycle loss
 
-                reconst_MNIST = gen_MNIST(fake_hindi)
-                cycle_MHM_loss = L1(mnist, reconst_MNIST)
+            reconst_MNIST = gen_MNIST(fake_hindi)
+            cycle_MHM_loss = L1(mnist, reconst_MNIST)
 
-                reconst_HINDI = gen_HINDI(fake_mnist)
-                cycle_HMH_loss = L1(hindi, reconst_HINDI)
+            reconst_HINDI = gen_HINDI(fake_mnist)
+            cycle_HMH_loss = L1(hindi, reconst_HINDI)
 
-                # Plot the reconstructed images
+            # Plot the reconstructed images
 
-                reconst_MNIST_plot = reconst_MNIST[0, :, :, :].clone().detach().cpu().numpy().squeeze(0)
-                plt.figure()
-                plt.imshow(reconst_MNIST_plot, cmap='gray')
-                writer.add_figure('Cycle_MHM (Reconstructed MNIST)', plt.gcf(), global_step=step)
+            reconst_MNIST_plot = reconst_MNIST[0, :, :, :].clone().detach().cpu().numpy().squeeze(0)
+            plt.figure()
+            plt.imshow(reconst_MNIST_plot, cmap='gray')
+            writer.add_figure('Cycle_MHM (Reconstructed MNIST)', plt.gcf(), global_step=step)
 
-                reconst_HINDI_plot = reconst_HINDI[0, :, :, :].clone().detach().cpu().numpy().squeeze(0)
-                plt.figure()
-                plt.imshow(reconst_HINDI_plot, cmap='gray')
-                writer.add_figure('Cycle_MHM (Reconstructed MNIST)', plt.gcf(), global_step=step)
+            reconst_HINDI_plot = reconst_HINDI[0, :, :, :].clone().detach().cpu().numpy().squeeze(0)
+            plt.figure()
+            plt.imshow(reconst_HINDI_plot, cmap='gray')
+            writer.add_figure('Cycle_MHM (Reconstructed MNIST)', plt.gcf(), global_step=step)
 
-                G_loss = (
-                        loss_Gen_MNIST
-                        + loss_Gen_HINDI
-                        + cycle_MHM_loss
-                        + cycle_HMH_loss
+            G_loss = (
+                    loss_Gen_MNIST
+                    + loss_Gen_HINDI
+                    + cycle_MHM_loss
+                    + cycle_HMH_loss
 
-                )
-                g_scaler.scale(G_loss).backward()
-                g_scaler.step(opt_gen)
-                g_scaler.update()
-                writer.add_scalar('Combined Generator Loss', G_loss.item(), global_step=step)
+            )
+            g_scaler.scale(G_loss).backward()
+            g_scaler.step(opt_gen)
+            g_scaler.update()
+            writer.add_scalar('Combined Generator Loss', G_loss.item(), global_step=step)
 
             # print the log info
             if (step + 1) % self.log_step == 0:

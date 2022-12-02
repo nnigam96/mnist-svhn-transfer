@@ -80,7 +80,7 @@ def get_random_hindi(hindi_dict, label, hindi = Hindi_Digits()):
     return image 
 
 def random_mnist_batch_gen(mnist_dict, labels):
-    batch = torch.zeros([len(labels),1, 32, 32])
+    batch = torch.zeros([len(labels),1, 32, 32],dtype=torch.float32)
     transform = transforms.Compose([
                     transforms.ToPILImage(),
                     transforms.Resize(32),
@@ -89,12 +89,12 @@ def random_mnist_batch_gen(mnist_dict, labels):
     for i,lb in enumerate(labels):
         img = get_random_mnist(mnist_dict, lb)
         img = transform(img.to(torch.uint8))
-        batch[i] = torch.tensor(img)
+        batch[i] = torch.tensor(img, dtype=torch.float32)
 
     return batch
 
 def random_hindi_batch_gen(hindi_dict, labels):
-    batch = torch.zeros([len(labels), 1, 32, 32])
+    batch = torch.zeros([len(labels), 1, 32, 32],dtype=torch.float32)
     transform = transforms.Compose([
                     transforms.ToPILImage(),
                     transforms.Resize(32),
@@ -104,6 +104,6 @@ def random_hindi_batch_gen(hindi_dict, labels):
         img = get_random_hindi(hindi_dict, lb)
         img = transform(img.to(torch.uint8))
 
-        batch[i] = torch.tensor(img)
+        batch[i] = torch.tensor(img, dtype=torch.float32)
 
     return batch
