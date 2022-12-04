@@ -1,6 +1,6 @@
 import argparse
 import os
-from solver_m import Solver
+from solver_new import Solver
 from torch.backends import cudnn
 from data_loader import *
 
@@ -38,7 +38,7 @@ if __name__ == '__main__':
     
     # training hyper-parameters
     parser.add_argument('--train_iters', type=int, default=100000)
-    parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--num_workers', type=int, default=2)
     parser.add_argument('--lr', type=float, default=0.002)
     parser.add_argument('--beta1', type=float, default=0.5)
